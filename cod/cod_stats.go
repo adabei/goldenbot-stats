@@ -44,7 +44,7 @@ func (s *Stats) Start() {
 				}
 			}
 		case cod.ShutdownGame:
-      // shutdowngame vs exitlevel?
+			// shutdowngame vs exitlevel?
 		case cod.Kill:
 			if s, ok := currentStats[ev.GUIDA]; ok {
 				s.Kills = s.Kills + 1
@@ -61,7 +61,7 @@ func (s *Stats) Start() {
 			}
 
 		case cod.Damage:
-      // not yet implemented (used for assists)
+			// not yet implemented (used for assists)
 		}
 	}
 }
