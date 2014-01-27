@@ -4,13 +4,14 @@ import (
 	"database/sql"
 	"github.com/adabei/goldenbot/events"
 	"github.com/adabei/goldenbot/events/cod"
-	_ "github.com/adabei/goldenbot/rcon/q3"
+	"github.com/adabei/goldenbot/rcon/"
 	_ "github.com/mattn/go-sqlite3"
 	"time"
 )
 
 type Stats struct {
-	db sql.DB
+	events rcon.RCONQuery
+	db     sql.DB
 }
 
 func NewStats(events events.Aggregator, db sql.DB) *Stats {
@@ -18,6 +19,26 @@ func NewStats(events events.Aggregator, db sql.DB) *Stats {
 	s.events = events
 	s.db = db
 	return s
+}
+
+const schema = `
+create table games (
+  started_at text primary key,
+  ended_at text,
+  mapname text
+);
+
+create table stats (
+  games_started_at text,
+  players_id text,
+  kills integer,
+  deaths integer,
+  assists integer,
+  primary key(games_started_at, players_id)
+);`
+
+func (s *Stats) Setup() error {
+	_, err := s.db.Exec(schema)
 }
 
 type playerStats struct {

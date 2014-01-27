@@ -1,11 +1,11 @@
 create table games (
-  started_at integer primary key,
-  ended_at integer,
+  started_at text primary key,
+  ended_at text,
   mapname text
 );
 
 create table stats (
-  games_started_at integer,
+  games_started_at text,
   players_id text,
   kills integer,
   deaths integer,
