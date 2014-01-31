@@ -4,30 +4,30 @@ import (
 	"database/sql"
 	"github.com/adabei/goldenbot/events"
 	"github.com/adabei/goldenbot/events/cod"
-	"github.com/adabei/goldenbot/rcon/"
-	_ "github.com/mattn/go-sqlite3"
+	"log"
 	"time"
 )
 
 type Stats struct {
-	events rcon.RCONQuery
-	db     sql.DB
+	events chan interface{}
+	db     *sql.DB
 }
 
-func NewStats(events events.Aggregator, db sql.DB) *Stats {
+func NewStats(ea events.Aggregator, db *sql.DB) *Stats {
 	s := new(Stats)
-	s.events = events
+	s.events = ea.Subscribe(s)
 	s.db = db
 	return s
 }
 
-const schema = `
+const gamesSchema = `
 create table games (
   started_at text primary key,
   ended_at text,
   mapname text
-);
+);`
 
+const statsSchema = `
 create table stats (
   games_started_at text,
   players_id text,
@@ -38,7 +38,17 @@ create table stats (
 );`
 
 func (s *Stats) Setup() error {
-	_, err := s.db.Exec(schema)
+	_, err := s.db.Exec(gamesSchema)
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+
+	_, err = s.db.Exec(statsSchema)
+	if err != nil {
+		log.Println(err)
+	}
+	return err
 }
 
 type playerStats struct {
@@ -49,24 +59,37 @@ type playerStats struct {
 
 func (s *Stats) Start() {
 	currentStats := make(map[string]*playerStats)
-	currentStartedAt := 0
+	currentStartedAt := time.Now().Unix()
+	var currentMap string
 	for {
 		ev := <-s.events
-		switch ev := in.(type) {
+		switch ev := ev.(type) {
 		case cod.InitGame:
-			currentStats := make(map[string]*playerStats)
-			currentStartedAt = time.Now().Unix()
+			currentStats = make(map[string]*playerStats)
+			currentStartedAt = ev.Unix
+			currentMap = "mp_backlot" // TODO extract from initgame
 		case cod.ExitLevel:
 			if len(currentStats) > 0 {
 				// write to db
 				for k, v := range currentStats {
-					s.db.Exec("insert into stats(games_started_at, players_id, kills, deaths, assists) values((?), (?), (?), (?), (?))",
-						currentStartedAt, k, v.Kills, v.Deaths, v.Assists)
+					log.Println("stats: inserting game", currentStartedAt, "into database")
+					_, err := s.db.Exec("insert into games(started_at, ended_at, mapname) values (?, ?, ?);", currentStartedAt, ev.Unix, currentMap)
+					if err != nil {
+						log.Fatal("stats: failed to insert games", err)
+					}
+
+					log.Println("stats: inserting stats for player", k, "into database")
+					_, err = s.db.Exec("insert into stats(games_started_at, players_id, kills, deaths, assists) values(?, ?, ?, ?, ?);", currentStartedAt, k, v.Kills, v.Deaths, v.Assists)
+
+					if err != nil {
+						log.Fatal("stats: failed to insert stats for player", k, err)
+					}
 				}
 			}
 		case cod.ShutdownGame:
 			// shutdowngame vs exitlevel?
 		case cod.Kill:
+			// TODO suicide
 			if s, ok := currentStats[ev.GUIDA]; ok {
 				s.Kills = s.Kills + 1
 			} else {
