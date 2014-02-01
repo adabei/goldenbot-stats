@@ -2,25 +2,26 @@ package cod
 
 import (
 	"database/sql"
-  "fmt"
+	"fmt"
+	integrated "github.com/adabei/goldenbot-integrated/cod"
 	"github.com/adabei/goldenbot/events"
 	"github.com/adabei/goldenbot/events/cod"
-  integrated "github.com/adabei/goldenbot-integrated/cod"
-  rcon "github.com/adabei/goldenbot/rcon"
+	rcon "github.com/adabei/goldenbot/rcon"
 	"log"
-  "strings"
+	"strconv"
+	"strings"
 	"time"
 )
 
 type Stats struct {
-  requests chan rcon.RCONQuery
-	events chan interface{}
-	db     *sql.DB
+	requests chan rcon.RCONQuery
+	events   chan interface{}
+	db       *sql.DB
 }
 
 func NewStats(requests chan rcon.RCONQuery, ea events.Aggregator, db *sql.DB) *Stats {
 	s := new(Stats)
-  s.requests = requests
+	s.requests = requests
 	s.events = ea.Subscribe(s)
 	s.db = db
 	return s
@@ -112,22 +113,28 @@ func (s *Stats) Start() {
 
 		case cod.Damage:
 			// not yet implemented (used for assists)
-    case cod.Say:
-      if strings.HasPrefix(ev.Message, "!stats") {
-        var kills int
-        var deaths int
-        var assists int
-        log.Println("stats: calculating stats for player", ev.GUID)
-        err := s.db.QueryRow("select sum(s.kills), sum(s.deaths), sum(s.assists) " +
-          "from stats s where s.players_id = ?", ev.GUID).Scan(&kills, &deaths, &assists)
-        if err != nil {
-          log.Println("stats: could not sum up stats for player", ev.GUID)
-        }
-        num, _ := integrated.Num(ev.GUID)
-        s.requests <- rcon.RCONQuery{Command: "tell " + string(num) + " " +
-          fmt.Sprintf("Kills: %d Deaths: %d Assists: %d", kills, deaths, assists),
-          Response: nil}
-      }
+		case cod.Say:
+			if strings.HasPrefix(ev.Message, "!stats") {
+				var kills int
+				var deaths int
+				var assists int
+				log.Println("stats: calculating stats for player", ev.GUID)
+				err := s.db.QueryRow("select sum(s.kills), sum(s.deaths), sum(s.assists) "+
+					"from stats s where s.players_id = ?", ev.GUID).Scan(&kills, &deaths, &assists)
+				if err != nil {
+					log.Println("stats: could not sum up stats for player", ev.GUID)
+				}
+
+				if num, ok := integrated.Num(ev.GUID); ok {
+					log.Println("stats: showing stats to player with guid", ev.GUID, "and num", num)
+					s.requests <- rcon.RCONQuery{Command: "tell " + strconv.Itoa(num) + " " +
+						fmt.Sprintf("Kills: %d Deaths: %d Assists: %d", kills, deaths, assists),
+						Response: nil}
+				} else {
+					log.Println("stats: could not resolve num for player", ev.GUID)
+				}
+
+			}
 		}
 	}
 }
