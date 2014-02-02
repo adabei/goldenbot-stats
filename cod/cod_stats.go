@@ -14,13 +14,19 @@ import (
 )
 
 type Stats struct {
+	cfg      Config
 	requests chan rcon.RCONQuery
 	events   chan interface{}
 	db       *sql.DB
 }
 
-func NewStats(requests chan rcon.RCONQuery, ea events.Aggregator, db *sql.DB) *Stats {
+type Config struct {
+	Prefix string
+}
+
+func NewStats(cfg Config, requests chan rcon.RCONQuery, ea events.Aggregator, db *sql.DB) *Stats {
 	s := new(Stats)
+	s.cfg = cfg
 	s.requests = requests
 	s.events = ea.Subscribe(s)
 	s.db = db
@@ -128,7 +134,7 @@ func (s *Stats) Start() {
 				if num, ok := integrated.Num(ev.GUID); ok {
 					log.Println("stats: showing stats to player with guid", ev.GUID, "and num", num)
 					s.requests <- rcon.RCONQuery{Command: "tell " + strconv.Itoa(num) + " " +
-						fmt.Sprintf("Kills: %d Deaths: %d Assists: %d", kills, deaths, assists),
+						s.cfg.Prefix + fmt.Sprintf("Kills: %d Deaths: %d Assists: %d", kills, deaths, assists),
 						Response: nil}
 				} else {
 					log.Println("stats: could not resolve num for player", ev.GUID)
