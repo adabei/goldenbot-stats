@@ -78,13 +78,13 @@ func (s *Stats) Start() {
 		case cod.ExitLevel:
 			if len(currentStats) > 0 {
 				// write to db
-				for k, v := range currentStats {
-					log.Println("stats: inserting game", currentStartedAt, "into database")
-					_, err := s.db.Exec("insert into games(started_at, ended_at, mapname) values (?, ?, ?);", currentStartedAt, ev.Unix, currentMap)
-					if err != nil {
-						log.Fatal("stats: failed to insert games", err)
-					}
+				log.Println("stats: inserting game", currentStartedAt, "into database")
+				_, err := s.db.Exec("insert into games(started_at, ended_at, mapname) values (?, ?, ?);", currentStartedAt, ev.Unix, currentMap)
+				if err != nil {
+					log.Fatal("stats: failed to insert games", err)
+				}
 
+				for k, v := range currentStats {
 					log.Println("stats: inserting stats for player", k, "into database")
 					_, err = s.db.Exec("insert into stats(games_started_at, players_id, kills, deaths, assists) values(?, ?, ?, ?, ?);", currentStartedAt, k, v.Kills, v.Deaths, v.Assists)
 
