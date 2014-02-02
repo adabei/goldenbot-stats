@@ -114,7 +114,7 @@ func (s *Stats) Start() {
 		case cod.Damage:
 			// not yet implemented (used for assists)
 		case cod.Say:
-			if strings.HasPrefix(ev.Message, "!stats") {
+			if strings.HasPrefix(ev.Message, "!stats") || strings.HasPrefix(ev.Message[1:], "!stats") {
 				var kills int
 				var deaths int
 				var assists int
