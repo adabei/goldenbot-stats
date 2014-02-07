@@ -103,17 +103,24 @@ func (s *Stats) Start() {
 			// shutdowngame vs exitlevel?
 		case cod.Kill:
 			// TODO suicide
+			if ev.GUIDA == ev.GUIDB {
+				if ev.DamageDealt == 100000 && ev.MOD == "MOD_SUICIDE" { // team switch
+					break
+				}
+				// suicide
+			}
+
 			if s, ok := currentStats[ev.GUIDA]; ok {
-				s.Kills = s.Kills + 1
+				s.Deaths = s.Deaths + 1
 			} else {
-				s = &playerStats{Kills: 1, Deaths: 0, Assists: 0}
+				s = &playerStats{Kills: 0, Deaths: 1, Assists: 0}
 				currentStats[ev.GUIDA] = s
 			}
 
 			if r, ok := currentStats[ev.GUIDB]; ok {
-				r.Deaths = r.Deaths + 1
+				r.Kills = r.Kills + 1
 			} else {
-				r := &playerStats{Kills: 0, Deaths: 1, Assists: 0}
+				r := &playerStats{Kills: 1, Deaths: 0, Assists: 0}
 				currentStats[ev.GUIDB] = r
 			}
 
